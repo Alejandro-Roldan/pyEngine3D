@@ -1,6 +1,7 @@
 ### Shark ###
 
 import graphics.engine
+import pygame
 
 points = []
 triangles = []
@@ -23,7 +24,23 @@ with open('coords/SharkT.txt', 'r') as f:
     f.close()
 
 test = graphics.engine.Engine3D(points, triangles, scale=100, title='Shark')
-test.render()
-test.screen.window.mainloop()
+
+# Create a pygame Clock object
+clock = pygame.time.Clock()
+
+running = True
+# Mainloop
+while running:
+    # Limit fps to 60
+    clock.tick(60)
+    print('FPS: {:.2f}'.format(clock.get_fps()), end='\r')
+
+    # Check the event queue
+    test.events()
+    # Draw the image
+    test.clear()
+    test.render()
+
+pygame.quit()
 
 ##############
