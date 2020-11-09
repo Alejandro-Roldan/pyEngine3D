@@ -28,8 +28,21 @@ def animation():
     test.clear()
     test.rotate('y', 0.1)
     test.render()
-    test.screen.after(1, animation)
 
-animation()
+# Create a pygame Clock object
+clock = pygame.time.Clock()
 
+running = True
+# Mainloop
+while running:
+    # Limit fps to 60
+    clock.tick(60)
+    print('FPS: {:.2f}'.format(clock.get_fps()), end='\r')
+
+    # Check the event queue
+    game.events()
+    # Draw the image
+    animation()
+
+pygame.quit()
 ################
