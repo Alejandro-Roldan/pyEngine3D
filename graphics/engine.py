@@ -55,7 +55,7 @@ class Engine3D:
         self.move_map = {K_w: ( 0, -5), K_s: ( 0,  5), K_a: (-5,  0), K_d: ( 5,  0)}
         
         #initialize display
-        self.screen = Pygame_Screen(width, height, title, background)
+        self.screen = graphics.screen.Screen(width, height, title, background)
         
         #store coordinates
         self.writePoints(points)
