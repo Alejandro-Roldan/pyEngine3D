@@ -1,78 +1,27 @@
 import graphics.screen
 import graphics.face
 import graphics.vertex
-import copy
+
+import pygame
+from pygame.locals import *
+from functools import reduce
+
 
 class Engine3D:
-    def __resetDrag(self, event):
+    def __resetDrag(self):
         self.__prev = []
     
-    def __drag(self, event):
+    def __drag(self, x, y):
         if self.__prev:
-            self.rotate('y', (event.x - self.__prev[0]) / 20)
-            self.rotate('x', (event.y - self.__prev[1]) / 20)
-            self.clear()
-            self.render()
-        self.__prev = [event.x, event.y]
+            self.rotate('y', (x - self.__prev[0]) / 20)
+            self.rotate('x', (y - self.__prev[1]) / 20)
+        self.__prev = [x, y]
 
-    def __select(self, event):
-        zeros = self.screen.zeros
-        event = (event.x - zeros[0], event.y - zeros[1])
-            
-        possibilities = []
-        for a in range(-6, 5):
-            for b in range(-6, 5):
-                possibilities.append((event[0] + a, event[1] + b))
-
-        found = [e for e in possibilities if e in self.flattened]
-        if found != []:
-            self.__moveaxis = None
-            self.__selected = self.flattened.index(found[0])
-
-            i = self.points[self.__selected]
-            self.__axis = [[copy.deepcopy(i) for a in range(2)] for b in range(3)]
-            
-            self.__axis[0][0].x -= 40 / self.scale
-            self.__axis[0][1].x += 40 / self.scale
-            self.__axis[1][0].y -= 40 / self.scale
-            self.__axis[1][1].y += 40 / self.scale
-            self.__axis[2][0].z -= 40 / self.scale
-            self.__axis[2][1].z += 40 / self.scale
-            
-            self.__axis = [[point.flatten(self.scale, self.distance) for point in i] for i in self.__axis]
-            self.__axis = [[[i[0] + zeros[0], i[1] + zeros[1]] for i in j] for j in self.__axis]
-            self.__axis = [self.screen.createLine(self.__axis[0], 'red'), self.screen.createLine(self.__axis[1], 'green'), self.screen.createLine(self.__axis[2], 'blue')]
-
-    def __selectx(self, event):
-        self.__moveaxis = 'x'
-
-    def __selecty(self, event):
-        self.__moveaxis = 'y'
-
-    def __selectz(self, event):
-        self.__moveaxis = 'z'
-
-    def __moveup(self, event):
-        if self.__selected != None and self.__moveaxis != None:
-            self.points[self.__selected].move(self.__moveaxis, 0.1)
-            self.clear()
-            self.render()
-
-    def __movedown(self, event):
-        if self.__selected != None and self.__moveaxis != None:
-            self.points[self.__selected].move(self.__moveaxis, -0.1)
-            self.clear()
-            self.render()
-
-    def __zoomin(self, event):
+    def __zoomin(self):
         self.scale += 2.5
-        self.clear()
-        self.render()
 
-    def __zoomout(self, event):
+    def __zoomout(self):
         self.scale -= 2.5
-        self.clear()
-        self.render()
 
     def __deselect(self, event):
         if self.__selected != None:
@@ -80,25 +29,9 @@ class Engine3D:
             self.__axis = [self.screen.delete(line) for line in self.__axis]
             self.__moveaxis = None
 
-    def __cameraleft(self, event):
-        self.screen.zeros[0] -= 5
-        self.clear()
-        self.render()
-
-    def __cameraright(self, event):
-        self.screen.zeros[0] += 5
-        self.clear()
-        self.render()
-
-    def __cameraup(self, event):
-        self.screen.zeros[1] -= 5
-        self.clear()
-        self.render()
-
-    def __cameradown(self, event):
-        self.screen.zeros[1] += 5
-        self.clear()
-        self.render()
+    def __cameramove(self, u):
+        self.screen.zeros[0] += u[0]
+        self.screen.zeros[1] += u[1]
         
     def writePoints(self, points):
         self.points = []
@@ -116,31 +49,13 @@ class Engine3D:
         #object parameters
         self.distance = distance
         self.scale = scale
-
-        #initialize display
-        self.screen = graphics.screen.Screen(width, height, title, background)
-        self.screen.window.bind('<B1-Motion>', self.__drag)
         self.__prev = []
-        self.screen.window.bind('<ButtonRelease-1>', self.__resetDrag)
 
-        self.screen.window.bind('<Up>', self.__zoomin)
-        self.screen.window.bind('<Down>', self.__zoomout)
-        self.screen.window.bind('w', self.__cameraup)
-        self.screen.window.bind('s', self.__cameradown)
-        self.screen.window.bind('a', self.__cameraleft)
-        self.screen.window.bind('d', self.__cameraright)
-
-        # this is for editing the model
-        self.__selected = None
-        self.__axis = []
-        self.__moveaxis = None
-        self.screen.window.bind('<ButtonPress-3>', self.__select)
-        self.screen.window.bind('<ButtonRelease-3>', self.__deselect)
-        self.screen.window.bind('x', self.__selectx)
-        self.screen.window.bind('y', self.__selecty)
-        self.screen.window.bind('z', self.__selectz)
-        self.screen.window.bind('<Left>', self.__movedown)
-        self.screen.window.bind('<Right>', self.__moveup)
+        # Dictionary with vector movement for the movement keys
+        self.move_map = {K_w: ( 0, -5), K_s: ( 0,  5), K_a: (-5,  0), K_d: ( 5,  0)}
+        
+        #initialize display
+        self.screen = Pygame_Screen(width, height, title, background)
         
         #store coordinates
         self.writePoints(points)
@@ -148,6 +63,47 @@ class Engine3D:
 
         #store faces
         self.writeTriangles(triangles)
+
+    def add(self, u, v):
+        ''' Vector add '''
+        return [u[i]+v[i] for i in range(len(u))]
+
+    def events(self):
+        ''' Event handling '''
+        for event in pygame.event.get():
+            # Control zoom with the mouse wheel
+            if event.type == MOUSEBUTTONDOWN:
+                # Mouse wheel forward
+                if event.button == 4:
+                    self.__zoomin()
+                # Mouse wheel backward
+                if event.button == 5:
+                    self.__zoomout()
+
+            # Reset drag when the left mouse button is unclicked
+            if event.type == MOUSEBUTTONUP:
+                if event.button == 1:
+                    self.__resetDrag()
+
+        # Get all pressed keys
+        pressed_key = pygame.key.get_pressed()
+        pressed_mouse = pygame.mouse.get_pressed()
+
+        # Get all directions the camera should move
+        move = [self.move_map[key] for key in self.move_map if pressed_key[key]]
+        # Add all directions together to get the final direction
+        reduced = reduce(self.add, move, (0, 0))
+        # When the movement is non-zero update the camera position
+        if reduced != (0, 0):
+            self.__cameramove(reduced)
+
+        # When the left click is pressed drag the model
+        if pressed_mouse[0] is True:
+            x, y = pygame.mouse.get_pos()
+            self.__drag(x, y)
+
+        # Move the event queue forward
+        pygame.event.pump()
 
     def clear(self):
         #clear display
