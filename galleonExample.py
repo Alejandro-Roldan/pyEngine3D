@@ -1,6 +1,7 @@
 ### Galleon ###
 
 import graphics.engine
+import pygame
 
 points = []
 triangles = []
