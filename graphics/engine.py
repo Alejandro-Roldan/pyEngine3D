@@ -132,3 +132,6 @@ class Engine3D:
         #draw triangles
         for triangle in triangles:
             self.screen.createTriangle(triangle[0:3], triangle[3])
+            
+        # Update the screen
+        pygame.display.update()
