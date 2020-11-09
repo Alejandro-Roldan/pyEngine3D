@@ -25,7 +25,7 @@ while running:
     print('FPS: {:.2f}'.format(clock.get_fps()), end='\r')
 
     # Check the event queue
-    game.events()
+    test.events()
     # Draw the image
     animation()
 
